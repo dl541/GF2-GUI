@@ -410,12 +410,16 @@ class Gui(wx.Frame):
         text = "Run button pressed."
         self.canvas.render(text)
         
-        if self.text_box.GetValue() == "Add signal":
+#        input_text = self.text_box.GetValue()
+        
+        if self.text_box.GetValue() == "A":
             new_monitor = "monitor {}".format(len(self.canvas.signal_dict)+1)
             self.canvas.signal_dict[new_monitor] = ["HIGH","FALLING","LOW"]
             self.canvas.color[new_monitor] = (random(), random(), random())
             self.canvas.render(text)
-            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"New monitor added."))
+            label = self.display_box.label.GetLabel()
+            self.display_box.label.SetLabel("{}\n{}".format(label,"New monitor added."))
+            self.Layout()
             
         if self.text_box.GetValue() == "h":
              label = self.display_box.label.GetLabel()
@@ -433,7 +437,7 @@ class Gui(wx.Frame):
 #            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"h         - help (this command)"))
 #            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"q         - quit the program"))
              
-#        if self.text_box.GetValue() == "h":
+
 
             
             
