@@ -19,6 +19,32 @@ from monitors import Monitors
 from scanner import Scanner
 from parse import Parser
 from random import random
+import wx.lib.scrolledpanel as scrolled
+
+
+class MyPanel(scrolled.ScrolledPanel):
+    """"""
+
+    #----------------------------------------------------------------------
+    def __init__(self, parent):
+        """Constructor"""
+        super(MyPanel, self).__init__(parent,
+                                      style = wx.TAB_TRAVERSAL|wx.SUNKEN_BORDER)
+        self.SetupScrolling()
+
+#        box = wx.StaticBox(self, label="Test Box")
+#        bsizer = wx.StaticBoxSizer(box, wx.VERTICAL)
+
+#        for i in range(15):
+#            txt = wx.TextCtrl(self)
+#            bsizer.Add(txt, 0, wx.ALL, 5)
+
+        self.main_sizer = wx.BoxSizer(wx.VERTICAL)
+        
+        self.label = wx.StaticText(self,wx.ID_ANY,"Logic Simulator: interactive command line user interface.\nEnter 'h' for help.")
+        self.main_sizer.Add(self.label, wx.EXPAND)
+#        self.main_sizer.Add(wx.StaticText(self,wx.ID_ANY,"Enter 'h' for help"))
+        self.SetSizer(self.main_sizer)
 
 
 class MyGLCanvas(wxcanvas.GLCanvas):
@@ -98,7 +124,13 @@ class MyGLCanvas(wxcanvas.GLCanvas):
         GL.glLoadIdentity()
         GL.glTranslated(self.pan_x, self.pan_y, 0.0)
         GL.glScaled(self.zoom, self.zoom, self.zoom)
-
+        
+    def reset(self): #reset the canva
+        pass
+#        GL.glTranslated(-self.pan_x, -self.pan_y, 0.0)
+#        self.pan_x, self.pan_y = 0.0, 0.0
+#        GL.glScaled(self.zoom, self.zoom, self.zoom)
+        
     def display_signal_prototype(self,signal_dict): #signal_dict: key -> item: signal (list)
         
         init_y = 0
@@ -106,16 +138,16 @@ class MyGLCanvas(wxcanvas.GLCanvas):
             x_pos = 10
             y_pos = init_y + 75
             
+            
             text = key
-
+            size = self.GetClientSize()
             GL.glColor3f(0.0, 0.0, 0.0)  # text is black
-            GL.glRasterPos2f(x_pos, y_pos)
+            GL.glRasterPos2f(0.9*size[0], 0.9*size[1]) #TODO: LEGEND DISPLAY
             font = GLUT.GLUT_BITMAP_HELVETICA_12
     
             for character in text:
                 if character == '\n':
-                    y_pos = y_pos - 20
-                    GL.glRasterPos2f(x_pos, y_pos)
+                    GL.glRasterPos2f(0.9*size[0], 0.9*size[1] - 25)
                 else:
                     GLUT.glutBitmapCharacter(font, ord(character))            
             x = 30
@@ -317,28 +349,43 @@ class Gui(wx.Frame):
 
         # Configure the widgets
         self.text = wx.StaticText(self, wx.ID_ANY, "Cycles")
-        self.spin = wx.SpinCtrl(self, wx.ID_ANY, "10")
+#        self.spin = wx.SpinCtrl(self, wx.ID_ANY, "10")
         self.run_button = wx.Button(self, wx.ID_ANY, "Run")
         self.text_box = wx.TextCtrl(self, wx.ID_ANY, "",
                                     style=wx.TE_PROCESS_ENTER)
-
+        
+        self.display_box = MyPanel(self)
+        self.reset_button = wx.Button(self, wx.ID_ANY, "Reset")
+        
         # Bind events to widgets
         self.Bind(wx.EVT_MENU, self.on_menu)
-        self.spin.Bind(wx.EVT_SPINCTRL, self.on_spin)
+        self.reset_button.Bind(wx.EVT_BUTTON, self.canvas.reset())
+#        self.spin.Bind(wx.EVT_SPINCTRL, self.on_spin)
         self.run_button.Bind(wx.EVT_BUTTON, self.on_run_button)
         self.text_box.Bind(wx.EVT_TEXT_ENTER, self.on_text_box)
 
         # Configure sizers for layout
-        main_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        side_sizer = wx.BoxSizer(wx.VERTICAL)
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+#        side_sizer = wx.BoxSizer(wx.VERTICAL)
+        bottom_sizer = wx.GridSizer(2,10,10)
+        control_sizer = wx.GridSizer(cols = 1,rows = 4, hgap = 10, vgap = 10)
+        
+        main_sizer.Add(self.canvas, 3, wx.EXPAND| wx.ALL,5)
+        main_sizer.Add(bottom_sizer, 1, wx.EXPAND)#|wx.ALL, 5)
+        
+        bottom_sizer.Add(control_sizer)
+        bottom_sizer.Add(self.display_box, 0, wx.EXPAND|wx.ALL,5)
 
-        main_sizer.Add(self.canvas, 5, wx.EXPAND | wx.ALL, 5)
-        main_sizer.Add(side_sizer, 1, wx.ALL, 5)
-
-        side_sizer.Add(self.text, 1, wx.TOP, 10)
-        side_sizer.Add(self.spin, 1, wx.ALL, 5)
-        side_sizer.Add(self.run_button, 1, wx.ALL, 5)
-        side_sizer.Add(self.text_box, 1, wx.ALL, 5)
+#        side_sizer.Add(self.text, 1, wx.TOP, 10)
+#        side_sizer.Add(self.spin, 1, wx.ALL, 5)
+#        side_sizer.Add(self.run_button, 1, wx.ALL, 5)
+#        side_sizer.Add(self.text_box, 1, wx.ALL, 5)
+        
+        control_sizer.Add(self.text,0,wx.TOP)
+        control_sizer.Add(self.run_button, 0, wx.ALL)
+        control_sizer.Add(self.text_box,0 ,wx.ALL)
+        control_sizer.Add(self.reset_button,0 ,wx.ALL)
+        
 
         self.SetSizeHints(600, 600)
         self.SetSizer(main_sizer)
@@ -362,7 +409,37 @@ class Gui(wx.Frame):
         """Handle the event when the user clicks the run button."""
         text = "Run button pressed."
         self.canvas.render(text)
+        
+        if self.text_box.GetValue() == "Add signal":
+            new_monitor = "monitor {}".format(len(self.canvas.signal_dict)+1)
+            self.canvas.signal_dict[new_monitor] = ["HIGH","FALLING","LOW"]
+            self.canvas.color[new_monitor] = (random(), random(), random())
+            self.canvas.render(text)
+            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"New monitor added."))
+            
+        if self.text_box.GetValue() == "h":
+             label = self.display_box.label.GetLabel()
+             new_message = ("User commands:\nr N       - run the simulation for N cycles")
+             self.display_box.label.SetLabel("{}\n{}".format(label,new_message))
+             self.Layout() # Refresh the display box
+             self.display_box.Scroll(self.GetClientSize()[0], -1)
+#            self.display_box.main_sizer.Add(wx.StaticText(self.display_box,wx.ID_ANY,"User commands:"))
+#            self.display_box.main_sizer.Add(wx.StaticText(self.display_box,wx.ID_ANY,"r N       - run the simulation for N cycles"))
+#            self.display_box.SetSizer(self.display_box.main_sizer)
+#            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"c N       - continue the simulation for N cycles"))
+#            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"s X N     - set switch X to N (0 or 1)"))
+#            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"m X       - set a monitor on signal X"))
+#            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"z X       - zap the monitor on signal X"))
+#            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"h         - help (this command)"))
+#            self.display_box.main_sizer.Add(wx.StaticText(wx.ID_ANY,"q         - quit the program"))
+             
+#        if self.text_box.GetValue() == "h":
 
+            
+            
+#        if self.text_box.GetValue() == "Delete Dict":
+            
+            
     def on_text_box(self, event):
         """Handle the event when the user enters text."""
         text_box_value = self.text_box.GetValue()
