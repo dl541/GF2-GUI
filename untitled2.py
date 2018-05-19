@@ -82,7 +82,7 @@ class MyGLCanvas(wxcanvas.GLCanvas):
         self.color = {}
         
         for key in self.signal_dict:
-            self.color[key] = (random(), random(), random())
+            self.color[key] = (random(), random(), random()) #randomise the color generation
             
     def init_gl(self):
         """Configure and initialise the OpenGL context."""
